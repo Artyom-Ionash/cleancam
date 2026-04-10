@@ -35,7 +35,7 @@ def generate_icon(png_path: Path, build_dir: Path) -> Path | None:
 
 
 def run_build():
-    project_root = Path(__file__).parent.parent.parent
+    project_root = Path(__file__).parent.parent
     main_script = str(project_root / "src" / "main.py")
 
     build_dir = project_root / "build"
