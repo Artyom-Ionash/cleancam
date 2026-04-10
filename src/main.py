@@ -19,7 +19,7 @@ def resource_path(relative_path):
     Работает и для разработки, и для PyInstaller."""
     try:
         # PyInstaller создает временную папку и хранит путь в _MEIPASS
-        base_path = sys._MEIPASS
+        base_path = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     except Exception:
         # Если запускаем через интерпретатор, берем путь относительно текущего файла
         base_path = os.path.abspath(".")
@@ -53,25 +53,28 @@ class VideoLabel(QLabel):
         super().__init__(parent)
         self.setMouseTracking(True)
         self._parent = parent
-        self.margin = 15
+        self.edge_margin = 15
 
     def _get_edge_flags(self, pos: QPoint) -> int:
         edge = 0
         w, h = self.width(), self.height()
         x, y = pos.x(), pos.y()
-        if x < self.margin:
+        if x < self.edge_margin:
             edge |= 1
-        if x > w - self.margin:
+        if x > w - self.edge_margin:
             edge |= 2
-        if y < self.margin:
+        if y < self.edge_margin:
             edge |= 4
-        if y > h - self.margin:
+        if y > h - self.edge_margin:
             edge |= 8
         return edge
 
-    def mouseMoveEvent(self, event: QMouseEvent):
-        if not self._parent._resizing:
-            edge = self._get_edge_flags(event.position().toPoint())
+    def mouseMoveEvent(self, ev: QMouseEvent | None):
+        if ev is None:
+            return
+        parent = self.parent()
+        if parent is not None and getattr(parent, "_resizing", False):
+            edge = self._get_edge_flags(ev.position().toPoint())
             cursors = {
                 1: Qt.CursorShape.SizeHorCursor,
                 2: Qt.CursorShape.SizeHorCursor,
@@ -83,7 +86,7 @@ class VideoLabel(QLabel):
                 9: Qt.CursorShape.SizeFDiagCursor,
             }
             self.setCursor(cursors.get(edge, Qt.CursorShape.ArrowCursor))
-        super().mouseMoveEvent(event)
+        super().mouseMoveEvent(ev)
 
 
 class CleanCam(QWidget):
@@ -151,10 +154,10 @@ class CleanCam(QWidget):
 
         # Меню трея
         menu = QMenu()
-        show_action = menu.addAction("Показать/Скрыть")
-        show_action.triggered.connect(self.toggle_visibility)
-        quit_action = menu.addAction("Выход")
-        quit_action.triggered.connect(self.close_application)
+        if show_action := menu.addAction("Показать/Скрыть"):
+            show_action.triggered.connect(self.toggle_visibility)
+        if quit_action := menu.addAction("Выход"):
+            quit_action.triggered.connect(self.close_application)
 
         self.tray_icon.setContextMenu(menu)
         self.tray_icon.activated.connect(self.on_tray_activated)
@@ -224,10 +227,10 @@ class CleanCam(QWidget):
         self.btn_rotate.show()
         super().enterEvent(event)
 
-    def leaveEvent(self, event):
+    def leaveEvent(self, a0):
         self.btn_close.hide()
         self.btn_rotate.hide()
-        super().leaveEvent(event)
+        super().leaveEvent(a0)
 
     def close_application(self):
         if self.cap:
@@ -235,27 +238,32 @@ class CleanCam(QWidget):
             self.cap = None
         QApplication.quit()
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0):
         # При нажатии "X" или закрытии окна — просто скрываем в трей, если не нажата кнопка Выход
-        event.ignore()
+        if a0:
+            a0.ignore()
         self.hide()
 
     # --- Proportional Resize Logic ---
-    def mousePressEvent(self, event: QMouseEvent):
-        pos = event.position().toPoint()
+    def mousePressEvent(self, a0: QMouseEvent | None):
+        if a0 is None:
+            return
+        pos = a0.position().toPoint()
         edge = self.video_label._get_edge_flags(pos)
-        if event.button() == Qt.MouseButton.LeftButton:
+        if a0.button() == Qt.MouseButton.LeftButton:
             if edge:
                 self._resizing = True
                 self._resize_edge = edge
-                self._drag_start_pos = event.globalPosition().toPoint()
+                self._drag_start_pos = a0.globalPosition().toPoint()
                 self._drag_start_geometry = self.geometry()
             else:
-                self.old_pos = event.globalPosition().toPoint()
+                self.old_pos = a0.globalPosition().toPoint()
 
-    def mouseMoveEvent(self, event: QMouseEvent):
+    def mouseMoveEvent(self, a0: QMouseEvent | None):
+        if a0 is None:
+            return
         if self._resizing:
-            delta = event.globalPosition().toPoint() - self._drag_start_pos
+            delta = a0.globalPosition().toPoint() - self._drag_start_pos
             g = self._drag_start_geometry
             new_rect = QRect(g)
 
@@ -277,12 +285,12 @@ class CleanCam(QWidget):
                 new_rect.setWidth(int(new_h * self.aspect_ratio))
 
             self.setGeometry(new_rect)
-        elif self.old_pos:
-            delta = event.globalPosition().toPoint() - self.old_pos
+        if self.old_pos is not None:
+            delta = a0.globalPosition().toPoint() - self.old_pos
             self.move(self.pos() + delta)
-            self.old_pos = event.globalPosition().toPoint()
+            self.old_pos = a0.globalPosition().toPoint()
 
-    def mouseReleaseEvent(self, event: QMouseEvent):
+    def mouseReleaseEvent(self, a0: QMouseEvent | None):
         self._resizing = False
         self.old_pos = None
 
