@@ -2,16 +2,17 @@ import os
 import sys
 
 import cv2
-from PyQt6.QtCore import QPoint, QRect, Qt, QTimer
+from PyQt6.QtCore import QRect, Qt, QTimer
 from PyQt6.QtGui import QColor, QIcon, QImage, QMouseEvent, QPainter, QPixmap
 from PyQt6.QtWidgets import (
     QApplication,
-    QLabel,
     QMenu,
-    QPushButton,
     QSystemTrayIcon,
     QWidget,
 )
+
+from ui.atoms.button import HoverButton
+from ui.atoms.video_label import VideoLabel
 
 
 def resource_path(relative_path):
@@ -25,75 +26,6 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
-
-
-class HoverButton(QPushButton):
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.setFixedSize(32, 32)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.hide()
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(0, 0, 0, 150);
-                color: rgba(255, 255, 255, 220);
-                border-radius: 16px;
-                font-size: 14px;
-                border: 1px solid rgba(255, 255, 255, 30);
-            }
-            QPushButton:hover {
-                background-color: rgba(0, 0, 0, 220);
-                color: white;
-            }
-        """)
-
-
-class VideoLabel(QLabel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setMouseTracking(True)
-        self._parent = parent
-        self.edge_margin = 15
-
-    def _get_edge_flags(self, pos: QPoint) -> int:
-        edge = 0
-        w, h = self.width(), self.height()
-        x, y = pos.x(), pos.y()
-        if x < self.edge_margin:
-            edge |= 1
-        if x > w - self.edge_margin:
-            edge |= 2
-        if y < self.edge_margin:
-            edge |= 4
-        if y > h - self.edge_margin:
-            edge |= 8
-        return edge
-
-    def mouseMoveEvent(self, ev: QMouseEvent | None):
-        if ev is None:
-            return
-
-        parent = self.parent()
-        # Если мы сейчас НЕ ресайзим, просто показываем, какой курсор БУДЕТ, если нажать
-        # Если ресайзим — оставляем тот, что выбрали при нажатии
-        if parent is not None and not getattr(parent, "_resizing", False):
-            edge = self._get_edge_flags(ev.position().toPoint())
-            if edge:
-                cursors = {
-                    1: Qt.CursorShape.SizeHorCursor,  # Left
-                    2: Qt.CursorShape.SizeHorCursor,  # Right
-                    4: Qt.CursorShape.SizeVerCursor,  # Top
-                    8: Qt.CursorShape.SizeVerCursor,  # Bottom
-                    5: Qt.CursorShape.SizeFDiagCursor,  # Top-Left (1+4)
-                    6: Qt.CursorShape.SizeBDiagCursor,  # Top-Right (2+4)
-                    9: Qt.CursorShape.SizeBDiagCursor,  # Bottom-Left (1+8)
-                    10: Qt.CursorShape.SizeFDiagCursor,  # Bottom-Right (2+8)
-                }
-                self.setCursor(cursors.get(edge, Qt.CursorShape.ArrowCursor))
-            else:
-                self.setCursor(Qt.CursorShape.ArrowCursor)
-
-        super().mouseMoveEvent(ev)
 
 
 class CleanCam(QWidget):
