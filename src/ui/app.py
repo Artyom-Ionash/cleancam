@@ -2,7 +2,7 @@ import sys
 
 from PyQt6.QtWidgets import QApplication
 
-from features.camera_window import CameraWindow
+from features.camera_controller import CameraController
 
 
 def run_app() -> int:
@@ -10,7 +10,7 @@ def run_app() -> int:
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
-    cam = CameraWindow()
-    cam.show()
+    controller = CameraController()
+    controller.run()
 
     return app.exec()
