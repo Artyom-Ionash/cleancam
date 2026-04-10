@@ -55,6 +55,7 @@ uv run python src/scripts/compile.py
 
 ```powershell
 uv run pyright --watch
+uv run ruff check . --fix
 ```
 
 ---

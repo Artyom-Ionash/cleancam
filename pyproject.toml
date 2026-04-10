@@ -7,9 +7,33 @@ requires-python = ">=3.12"
 dependencies = ["opencv-python>=4.11.0", "pyqt6>=6.7.0"]
 
 [dependency-groups]
-dev = ["pillow>=12.2.0", "pyinstaller>=6.10.0", "pyright>=1.1.408"]
+dev = [
+    "pillow>=12.2.0",
+    "pyinstaller>=6.10.0",
+    "pyright>=1.1.408",
+    "ruff>=0.15.10",
+]
 
 [tool.pyright]
 include = ["src"]
 typeCheckingMode = "standard"
 disableBytesTypePromotions = false
+
+[tool.ruff]
+# Указываем папку с исходниками
+src = ["src"]
+# Исключаем типичные папки
+exclude = ["build", "dist", ".venv"]
+
+[tool.ruff.lint]
+# Какие правила включить (E - стиль, F - ошибки, I - сортировка импортов)
+select = ["E", "F", "I"]
+# Что игнорировать
+ignore = [
+    "E501", # Длинные строки (иногда в OpenCV/PyQt они неизбежны)
+    "F401", # Неиспользуемые импорты
+]
+
+[tool.ruff.lint.isort]
+# Чтобы импорты всегда были красиво отсортированы
+known-first-party = ["src"]
