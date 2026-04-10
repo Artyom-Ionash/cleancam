@@ -39,7 +39,7 @@ uv run src/main.py
 **Выполните команду:**
 
 ```powershell
-uv run build
+uv run python src/scripts/compile.py
 ```
 
 **Что происходит при сборке:**

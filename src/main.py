@@ -1,9 +1,31 @@
 import os
 import sys
+
 import cv2
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QSystemTrayIcon, QMenu
-from PyQt6.QtCore import Qt, QTimer, QPoint, QRect, QSize
-from PyQt6.QtGui import QImage, QPixmap, QMouseEvent, QIcon, QPainter, QColor
+from PyQt6.QtCore import QPoint, QRect, Qt, QTimer
+from PyQt6.QtGui import QColor, QIcon, QImage, QMouseEvent, QPainter, QPixmap
+from PyQt6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QSystemTrayIcon,
+    QWidget,
+)
+
+
+def resource_path(relative_path):
+    """Получает абсолютный путь к ресурсам.
+    Работает и для разработки, и для PyInstaller."""
+    try:
+        # PyInstaller создает временную папку и хранит путь в _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # Если запускаем через интерпретатор, берем путь относительно текущего файла
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 
 class HoverButton(QPushButton):
     def __init__(self, text, parent=None):
@@ -25,6 +47,7 @@ class HoverButton(QPushButton):
             }
         """)
 
+
 class VideoLabel(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -36,23 +59,32 @@ class VideoLabel(QLabel):
         edge = 0
         w, h = self.width(), self.height()
         x, y = pos.x(), pos.y()
-        if x < self.margin: edge |= 1
-        if x > w - self.margin: edge |= 2
-        if y < self.margin: edge |= 4
-        if y > h - self.margin: edge |= 8
+        if x < self.margin:
+            edge |= 1
+        if x > w - self.margin:
+            edge |= 2
+        if y < self.margin:
+            edge |= 4
+        if y > h - self.margin:
+            edge |= 8
         return edge
 
     def mouseMoveEvent(self, event: QMouseEvent):
         if not self._parent._resizing:
             edge = self._get_edge_flags(event.position().toPoint())
             cursors = {
-                1: Qt.CursorShape.SizeHorCursor, 2: Qt.CursorShape.SizeHorCursor,
-                4: Qt.CursorShape.SizeVerCursor, 8: Qt.CursorShape.SizeVerCursor,
-                5: Qt.CursorShape.SizeBDiagCursor, 10: Qt.CursorShape.SizeBDiagCursor,
-                6: Qt.CursorShape.SizeFDiagCursor, 9: Qt.CursorShape.SizeFDiagCursor
+                1: Qt.CursorShape.SizeHorCursor,
+                2: Qt.CursorShape.SizeHorCursor,
+                4: Qt.CursorShape.SizeVerCursor,
+                8: Qt.CursorShape.SizeVerCursor,
+                5: Qt.CursorShape.SizeBDiagCursor,
+                10: Qt.CursorShape.SizeBDiagCursor,
+                6: Qt.CursorShape.SizeFDiagCursor,
+                9: Qt.CursorShape.SizeFDiagCursor,
             }
             self.setCursor(cursors.get(edge, Qt.CursorShape.ArrowCursor))
         super().mouseMoveEvent(event)
+
 
 class CleanCam(QWidget):
     def __init__(self):
@@ -63,17 +95,19 @@ class CleanCam(QWidget):
         self._resizing = False
         self._resize_edge = 0
         self.aspect_ratio = 1.0
-        self.initial_resize_done = False # Флаг для первой подгонки размера
+        self.initial_resize_done = False  # Флаг для первой подгонки размера
 
         self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Tool
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMouseTracking(True)
 
-        self.setStyleSheet("background-color: rgba(10, 10, 10, 1); border: 1px solid rgba(255, 255, 255, 10);")
+        self.setStyleSheet(
+            "background-color: rgba(10, 10, 10, 1); border: 1px solid rgba(255, 255, 255, 10);"
+        )
 
         # УБРАНО: self.resize(320, 480)
 
@@ -89,23 +123,13 @@ class CleanCam(QWidget):
         # Инициализация трея
         self.setup_tray()
 
-        icon_path = self.get_resource_path(os.path.join("assets", "icon.ico"))
+        icon_path = resource_path(os.path.join("assets", "icon.png"))
         self.setWindowIcon(QIcon(icon_path))
         self.tray_icon.setIcon(QIcon(icon_path))
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(16)
-
-    def get_resource_path(self, relative_path):
-        """Получение абсолютного пути к ресурсам для разработки и сборки."""
-        import os
-        import sys
-        if hasattr(sys, '_MEIPASS'):
-            # PyInstaller создает временную папку _MEIPASS
-            return os.path.join(sys._MEIPASS, relative_path)
-        # Путь при обычном запуске (от корня проекта)
-        return os.path.join(os.path.abspath("."), relative_path)
 
     def setup_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -150,12 +174,18 @@ class CleanCam(QWidget):
     def update_frame(self):
         if self.cap is None:
             self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-            if not self.cap.isOpened(): return
+            if not self.cap.isOpened():
+                return
 
         ret, frame = self.cap.read()
-        if not ret: return
+        if not ret:
+            return
 
-        mode_map = {90: cv2.ROTATE_90_CLOCKWISE, 180: cv2.ROTATE_180, 270: cv2.ROTATE_90_COUNTERCLOCKWISE}
+        mode_map = {
+            90: cv2.ROTATE_90_CLOCKWISE,
+            180: cv2.ROTATE_180,
+            270: cv2.ROTATE_90_COUNTERCLOCKWISE,
+        }
         if self.rotation_angle in mode_map:
             frame = cv2.rotate(frame, mode_map[self.rotation_angle])
 
@@ -174,7 +204,9 @@ class CleanCam(QWidget):
         q_img = QImage(frame.data, w, h, ch * w, QImage.Format.Format_RGB888)
         # Используем KeepAspectRatio для чистоты отрисовки
         pixmap = QPixmap.fromImage(q_img).scaled(
-            self.size(), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+            self.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
         )
         self.video_label.setPixmap(pixmap)
         self.video_label.setGeometry(0, 0, self.width(), self.height())
@@ -227,19 +259,19 @@ class CleanCam(QWidget):
             g = self._drag_start_geometry
             new_rect = QRect(g)
 
-            if self._resize_edge & 2: # Right
+            if self._resize_edge & 2:  # Right
                 new_w = max(100, g.width() + delta.x())
                 new_rect.setWidth(new_w)
                 new_rect.setHeight(int(new_w / self.aspect_ratio))
-            elif self._resize_edge & 1: # Left
+            elif self._resize_edge & 1:  # Left
                 new_w = max(100, g.width() - delta.x())
                 new_rect.setLeft(g.right() - new_w)
                 new_rect.setHeight(int(new_w / self.aspect_ratio))
-            elif self._resize_edge & 8: # Bottom
+            elif self._resize_edge & 8:  # Bottom
                 new_h = max(100, g.height() + delta.y())
                 new_rect.setHeight(new_h)
                 new_rect.setWidth(int(new_h * self.aspect_ratio))
-            elif self._resize_edge & 4: # Top
+            elif self._resize_edge & 4:  # Top
                 new_h = max(100, g.height() - delta.y())
                 new_rect.setTop(g.bottom() - new_h)
                 new_rect.setWidth(int(new_h * self.aspect_ratio))
@@ -253,6 +285,7 @@ class CleanCam(QWidget):
     def mouseReleaseEvent(self, event: QMouseEvent):
         self._resizing = False
         self.old_pos = None
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
