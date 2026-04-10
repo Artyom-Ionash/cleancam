@@ -130,6 +130,14 @@ class CleanCam(QWidget):
         self.btn_rotate = HoverButton("↺", self)
         self.btn_rotate.clicked.connect(self.rotate_camera)
 
+        # Состояние камер
+        self.camera_indices = self.get_available_cameras()
+        self.current_camera_idx = 0
+
+        # Кнопка переключения камер (рядом с поворотом)
+        self.btn_switch = HoverButton("📷", self)
+        self.btn_switch.clicked.connect(self.switch_camera)
+
         # Инициализация трея
         self.setup_tray()
 
@@ -170,6 +178,32 @@ class CleanCam(QWidget):
         self.tray_icon.activated.connect(self.on_tray_activated)
         self.tray_icon.show()
 
+    def get_available_cameras(self):
+        """Проверяет первые 5 индексов на наличие доступных камер."""
+        available = []
+        for i in range(5):
+            cap = cv2.VideoCapture(i, cv2.CAP_DSHOW)
+            if cap.isOpened():
+                available.append(i)
+                cap.release()
+        return available if available else [0]
+
+    def switch_camera(self):
+        # Обновляем список (вдруг воткнули новую камеру)
+        self.camera_indices = self.get_available_cameras()
+
+        # Переходим к следующему индексу в списке
+        self.current_camera_idx = (self.current_camera_idx + 1) % len(
+            self.camera_indices
+        )
+        new_device_index = self.camera_indices[self.current_camera_idx]
+
+        print(f"Переключение на камеру с индексом: {new_device_index}")
+
+        if self.cap:
+            self.cap.release()
+            self.cap = None  # Магия переподключения сработает в update_frame
+
     def toggle_visibility(self):
         if self.isVisible():
             self.hide()
@@ -183,8 +217,11 @@ class CleanCam(QWidget):
 
     def update_frame(self):
         if self.cap is None:
-            self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+            # Используем выбранный индекс вместо жестко прописанного 0
+            device_idx = self.camera_indices[self.current_camera_idx]
+            self.cap = cv2.VideoCapture(device_idx, cv2.CAP_DSHOW)
             if not self.cap.isOpened():
+                self.cap = None
                 return
 
         ret, frame = self.cap.read()
@@ -224,6 +261,7 @@ class CleanCam(QWidget):
         margin, btn_s = 10, self.btn_close.width()
         self.btn_close.move(self.width() - btn_s - margin, margin)
         self.btn_rotate.move(self.width() - (btn_s * 2) - margin - 8, margin)
+        self.btn_switch.move(self.width() - (btn_s * 3) - margin - 16, margin)
 
     def rotate_camera(self):
         self.rotation_angle = (self.rotation_angle + 90) % 360
@@ -232,11 +270,13 @@ class CleanCam(QWidget):
     def enterEvent(self, event):
         self.btn_close.show()
         self.btn_rotate.show()
+        self.btn_switch.show()  # Добавьте эту строку
         super().enterEvent(event)
 
     def leaveEvent(self, a0):
         self.btn_close.hide()
         self.btn_rotate.hide()
+        self.btn_switch.hide()  # Добавьте эту строку
         super().leaveEvent(a0)
 
     def close_application(self):
