@@ -7,10 +7,11 @@ requires-python = ">=3.12"
 dependencies = ["opencv-python>=4.11.0", "pyqt6>=6.7.0"]
 
 [dependency-groups]
-dev = ["pyinstaller>=6.10.0"]
+dev = ["pillow>=12.2.0", "pyinstaller>=6.10.0"]
 
 [project.scripts]
 build = "cleancam.scripts.compile:run_build"
+make-icon = "cleancam.scripts.make_icon:create_multiscale_ico"
 
 [tool.setuptools.package-dir]
 cleancam = "src"

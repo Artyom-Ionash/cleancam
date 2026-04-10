@@ -1,3 +1,4 @@
+import os
 import sys
 import cv2
 from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QPushButton, QSystemTrayIcon, QMenu
@@ -88,9 +89,23 @@ class CleanCam(QWidget):
         # Инициализация трея
         self.setup_tray()
 
+        icon_path = self.get_resource_path(os.path.join("assets", "icon.ico"))
+        self.setWindowIcon(QIcon(icon_path))
+        self.tray_icon.setIcon(QIcon(icon_path))
+
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(16)
+
+    def get_resource_path(self, relative_path):
+        """Получение абсолютного пути к ресурсам для разработки и сборки."""
+        import os
+        import sys
+        if hasattr(sys, '_MEIPASS'):
+            # PyInstaller создает временную папку _MEIPASS
+            return os.path.join(sys._MEIPASS, relative_path)
+        # Путь при обычном запуске (от корня проекта)
+        return os.path.join(os.path.abspath("."), relative_path)
 
     def setup_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
