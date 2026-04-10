@@ -225,7 +225,13 @@ class CleanCam(QWidget):
                 return
 
         ret, frame = self.cap.read()
+
+        # ЛОГИКА ОБРАБОТКИ ПОТЕРЬ:
         if not ret:
+            print("Сигнал потерян. Попытка переподключения...")
+            if self.cap:
+                self.cap.release()
+            self.cap = None  # Сброс заставит блок выше сработать снова
             return
 
         mode_map = {
