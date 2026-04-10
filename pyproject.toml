@@ -1,0 +1,16 @@
+[project]
+name = "cleancam"
+version = "0.1.0"
+description = "Минималистичное безрамочное окно веб-камеры"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["opencv-python>=4.11.0", "pyqt6>=6.7.0"]
+
+[dependency-groups]
+dev = ["pyinstaller>=6.10.0"]
+
+[project.scripts]
+build = "cleancam.scripts.compile:run_build"
+
+[tool.setuptools.package-dir]
+cleancam = "src"
