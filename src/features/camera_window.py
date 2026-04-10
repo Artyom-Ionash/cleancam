@@ -4,9 +4,9 @@ from PyQt6.QtWidgets import QApplication, QWidget
 
 from core.python.paths import resource_path
 from lib.video.camera_logic import CameraManager
-from ui.atoms.button import HoverButton
 from ui.atoms.tray_icon import AppTrayIcon
 from ui.atoms.video_label import VideoLabel
+from ui.molecules.camera_controls import CameraControls
 
 
 class CameraWindow(QWidget):
@@ -33,14 +33,13 @@ class CameraWindow(QWidget):
         self.video_label = VideoLabel(self)
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.btn_close = HoverButton("✕", self)
-        self.btn_close.clicked.connect(self.close_application)
-
-        self.btn_rotate = HoverButton("↺", self)
-        self.btn_rotate.clicked.connect(self.logic.rotate_camera)
-
-        self.btn_switch = HoverButton("📷", self)
-        self.btn_switch.clicked.connect(self.logic.switch_camera)
+        # Молекула управления (Overlay)
+        self.controls = CameraControls(
+            parent=self,
+            on_switch=self.logic.switch_camera,
+            on_rotate=self.logic.rotate_camera,
+            on_close=self.close_application,
+        )
 
         # Трей
         icon_path = resource_path("assets/icon.png")
@@ -53,9 +52,10 @@ class CameraWindow(QWidget):
         )
         self.tray_icon.show()
 
+        # Таймер обновления UI (теперь легкий, т.к. кадры идут из очереди)
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_ui)
-        self.timer.start(16)
+        self.timer.start(16)  # ~60 FPS
 
     def update_ui(self):
         frame = self.logic.get_frame()
@@ -78,11 +78,10 @@ class CameraWindow(QWidget):
         self.video_label.setPixmap(pixmap)
         self.video_label.setGeometry(0, 0, self.width(), self.height())
 
-        # Позиционирование кнопок
-        margin, btn_s = 10, self.btn_close.width()
-        self.btn_close.move(self.width() - btn_s - margin, margin)
-        self.btn_rotate.move(self.width() - (btn_s * 2) - margin - 8, margin)
-        self.btn_switch.move(self.width() - (btn_s * 3) - margin - 16, margin)
+    def resizeEvent(self, a0):
+        """Обновление геометрии оверлея при изменении размера окна."""
+        super().resizeEvent(a0)
+        self.controls.setGeometry(self.width() - 130, 10, 120, 40)
 
     def toggle_visibility(self):
         if self.isVisible():
@@ -92,15 +91,11 @@ class CameraWindow(QWidget):
             self.raise_()
 
     def enterEvent(self, event):
-        self.btn_close.show()
-        self.btn_rotate.show()
-        self.btn_switch.show()
+        self.controls.show_controls()
         super().enterEvent(event)
 
     def leaveEvent(self, a0):
-        self.btn_close.hide()
-        self.btn_rotate.hide()
-        self.btn_switch.hide()
+        self.controls.hide_controls()
         super().leaveEvent(a0)
 
     def close_application(self):
@@ -134,7 +129,7 @@ class CameraWindow(QWidget):
             delta = a0.globalPosition().toPoint() - self._drag_start_pos
             g = self._drag_start_geometry
             new_rect = QRect(g)
-            # Логика ресайза...
+
             if self._resize_edge & 2:
                 new_w = max(100, g.width() + delta.x())
                 new_rect.setWidth(new_w)
