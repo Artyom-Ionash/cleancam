@@ -3,20 +3,26 @@ import os
 from pathlib import Path
 
 def run_build():
-    # Мы находимся в src/scripts/compile.py, main.py в src/main.py
     base_path = Path(__file__).parent.parent.resolve()
     project_root = base_path.parent
-    main_script = str(base_path / "main.py")
+
+    # Путь к папке build в корне проекта
+    build_dir = project_root / "build"
 
     params = [
-        main_script,
+        str(base_path / "main.py"),
         '--name=CleanCam',
         '--onefile',
         '--windowed',
         '--noconfirm',
         '--clean',
+        # Указываем PyInstaller класть .spec файл в папку build
+        f'--specpath={str(build_dir)}',
         f'--distpath={str(project_root / "dist")}',
-        f'--workpath={str(project_root / "build")}',
+        f'--workpath={str(build_dir)}',
     ]
 
     PyInstaller.__main__.run(params)
+
+if __name__ == "__main__":
+    run_build()
